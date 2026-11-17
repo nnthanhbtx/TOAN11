@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isCurrentLessonExam = !generalExams.some((ex) => ex.id === currentExam.id);
 
   return (
-    <header className="sticky top-0 z-40 bg-[#070f24]/95 backdrop-blur-md border-b border-sky-950 text-white shadow-lg">
+    <header className="sticky top-0 z-40 bg-[#070f24]/95 backdrop-blur-md border-b border-sky-950 text-white shadow-lg pt-safe pl-safe pr-safe">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-1.5 md:gap-4">
         {/* Zone 1: Brand Wordmark */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">

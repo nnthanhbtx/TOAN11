@@ -284,7 +284,25 @@ export default function App() {
   }, [studentName, studentClass]);
 
   const examStartTimeRef = useRef<number | null>(null);
-  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState<number>(0);
+  const lastFormInteractionRef = useRef<number>(0);
+  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState<number>(() => {
+    try {
+      const savedProgress = localStorage.getItem(ACTIVE_PROGRESS_STORAGE_KEY);
+      if (savedProgress) {
+        const parsed = JSON.parse(savedProgress);
+        if (
+          parsed &&
+          parsed.selectedExamId === currentExam.id &&
+          typeof parsed.timerElapsedSeconds === 'number'
+        ) {
+          return parsed.timerElapsedSeconds;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return 0;
+  });
   const [submittedDurationSeconds, setSubmittedDurationSeconds] = useState<number>(0);
   const studentNameInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -355,6 +373,7 @@ export default function App() {
             interactedPart4: Array.from(interactedPart4),
             bookmarked: Array.from(bookmarkedQuestions),
             violations,
+            timerElapsedSeconds,
           })
         );
       }
@@ -369,6 +388,7 @@ export default function App() {
     interactedPart4,
     bookmarkedQuestions,
     violations,
+    timerElapsedSeconds,
   ]);
 
   // Chức năng âm thanh chỉ hoạt động khi học sinh bắt đầu làm bài được tính giờ
@@ -383,11 +403,13 @@ export default function App() {
       return;
     }
 
-    // Lưu kích thước khung hình chuẩn ngay khi bắt đầu làm bài
-    baselineViewportRef.current = {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    };
+    // Lưu kích thước khung hình chuẩn sau khi bàn phím ảo trên iPhone / Android đã đóng
+    const initTimer = window.setTimeout(() => {
+      baselineViewportRef.current = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    }, 500);
 
     const recordViolation = (
       type: ExamViolation['type'],
@@ -424,6 +446,14 @@ export default function App() {
       playViolationAlarmSound();
     };
 
+    const handleFormActivity = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        lastFormInteractionRef.current = Date.now();
+      }
+    };
+
     // 1. Phát hiện chuyển sang Tab khác, ẩn trình duyệt hoặc màn hình bị khoá
     const handleVisibilityChange = () => {
       if (document.hidden || document.visibilityState === 'hidden') {
@@ -436,10 +466,18 @@ export default function App() {
 
     // 2. Phát hiện mở cửa sổ nổi (Pop-up AI / ChatGPT / Gemini), chia đôi màn hình hoặc che một góc màn hình làm mất tiêu điểm
     const handleWindowBlur = () => {
-      // Nếu trang vẫn hiển thị nhưng mất focus -> học sinh vừa chạm vào cửa sổ nổi / công cụ AI che góc màn hình
       setTimeout(() => {
         if (document.hidden || document.visibilityState === 'hidden') {
           return; // Đã được xử lý bởi visibilitychange
+        }
+        const activeTag = document.activeElement?.tagName;
+        if (
+          activeTag === 'INPUT' ||
+          activeTag === 'TEXTAREA' ||
+          activeTag === 'SELECT' ||
+          Date.now() - lastFormInteractionRef.current < 1500
+        ) {
+          return;
         }
         if (!document.hasFocus()) {
           recordViolation(
@@ -447,14 +485,19 @@ export default function App() {
             'Màn hình bị che một góc hoặc mở cửa sổ phụ / công cụ AI đè lên giao diện làm bài'
           );
         }
-      }, 120);
+      }, 160);
     };
 
     // 3. Phát hiện thu nhỏ khung trình duyệt, chia đôi màn hình (Split-Screen) hoặc cửa sổ nổi che góc màn hình
     const handleViewportResize = () => {
       const activeTag = document.activeElement?.tagName;
-      // Bỏ qua khi học sinh đang nhấn vào ô nhập số (bàn phím ảo điện thoại bật lên)
-      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+      // Bỏ qua khi học sinh đang nhấn vào ô nhập số (bàn phím ảo iPhone / Android bật lên hoặc vừa đóng)
+      if (
+        activeTag === 'INPUT' ||
+        activeTag === 'TEXTAREA' ||
+        activeTag === 'SELECT' ||
+        Date.now() - lastFormInteractionRef.current < 1600
+      ) {
         return;
       }
 
@@ -464,8 +507,15 @@ export default function App() {
       const currentW = window.innerWidth;
       const currentH = window.innerHeight;
 
-      // Nếu chiều rộng hoặc chiều cao bị thu hẹp bất thường (> 14%) do chia đôi màn hình hoặc kéo khung AI che góc
-      if (currentW < base.width * 0.86 || currentH < base.height * 0.82) {
+      // Cập nhật chiều cao lớn nhất khi thanh địa chỉ Safari thu gọn hoặc bàn phím ảo đóng lại
+      if (currentH > base.height && currentW === base.width) {
+        base.height = currentH;
+      }
+
+      const isMobileScreen = currentW < 1024;
+      const heightRatioThreshold = isMobileScreen ? 0.55 : 0.82;
+
+      if (currentW < base.width * 0.86 || currentH < base.height * heightRatioThreshold) {
         recordViolation(
           'split_or_overlay_ai',
           'Chia đôi màn hình hoặc thu hẹp góc màn hình để sử dụng công cụ AI giải bài'
@@ -484,12 +534,17 @@ export default function App() {
       );
     };
 
+    document.addEventListener('focusin', handleFormActivity);
+    document.addEventListener('focusout', handleFormActivity);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('resize', handleViewportResize);
     document.addEventListener('copy', handleCopyAttempt);
 
     return () => {
+      window.clearTimeout(initTimer);
+      document.removeEventListener('focusin', handleFormActivity);
+      document.removeEventListener('focusout', handleFormActivity);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('resize', handleViewportResize);
@@ -1142,6 +1197,8 @@ export default function App() {
                   setStudentInfoError('Vui lòng nhập đầy đủ Họ và tên học sinh và Lớp.');
                   return;
                 }
+                lastFormInteractionRef.current = Date.now();
+                (document.activeElement as HTMLElement | null)?.blur();
                 setStudentInfoError('');
                 setIsStudentModalOpen(false);
                 if (!isExamStarted && !isSubmitted) {

@@ -36,8 +36,8 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#071126] rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/40 text-white space-y-5 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn pt-safe pb-safe">
+      <div className="bg-[#071126] rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-cyan-500/40 text-white space-y-5 max-h-[90vh] max-h-[90dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-sky-900/80 pb-4">
           <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                 Chế Độ Điện Thoại & Không Cần Wi-Fi
               </h3>
               <p className="text-xs text-sky-300">
-                Tối ưu hiển thị mọi dòng máy & tự động lưu bài làm ngoại tuyến
+                Tương thích hoàn hảo từ iPhone 10 đến iPhone 18 & mọi máy Android
               </p>
             </div>
           </div>
@@ -112,23 +112,22 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Làm bài không cần Wi-Fi / 4G:</strong> Toàn bộ đề thi, font chữ{' '}
-                <em>Times New Roman</em>, công thức Toán chuẩn LaTeX và hình vẽ TikZ đều được tải
-                sẵn vào bộ nhớ điện thoại.
+                <strong>Làm bài không cần Wi-Fi / 4G:</strong> Toàn bộ 33 bài lý thuyết, 92 đề thi,
+                công thức Toán chuẩn LaTeX và hình vẽ không gian TikZ đều được lưu sẵn vào bộ nhớ điện thoại.
               </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Tự động lưu đáp án tức thì:</strong> Khi mất mạng hoặc lỡ tay tải lại trang
-                trên điện thoại, toàn bộ đáp án học sinh đã chọn vẫn được giữ nguyên.
+                <strong>Tự động lưu đáp án & thời gian tức thì:</strong> Khi mất mạng hoặc lỡ tay tải
+                lại trang trên điện thoại, toàn bộ đáp án và thời gian làm bài vẫn được giữ nguyên.
               </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Giao diện câu hỏi to, rõ, vừa khít màn hình:</strong> Tối ưu cho mọi màn
-                hình iPhone, Samsung, Xiaomi, OPPO, Vivo; có thanh chọn câu hỏi nhanh ở đáy màn hình.
+                <strong>Tối ưu chuẩn cho iPhone 10 đến iPhone 18 & Android:</strong> Hỗ trợ đầy đủ
+                Tai thỏ, Dynamic Island, nút đổi dấu âm <code>±</code> trên bàn phím số iOS và thanh chọn câu nhanh ở đáy màn hình.
               </span>
             </li>
           </ul>

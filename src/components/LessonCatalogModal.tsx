@@ -71,8 +71,8 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl h-[93vh] flex flex-col rounded-2xl border border-teal-500/30 bg-[#0d1f38] text-slate-100 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 pt-safe pb-safe">
+      <div className="relative w-full max-w-6xl h-[92vh] h-[92dvh] flex flex-col rounded-2xl border border-teal-500/30 bg-[#0d1f38] text-slate-100 shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-slate-800/80 bg-[#0a1628] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
