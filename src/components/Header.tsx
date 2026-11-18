@@ -7,6 +7,7 @@ import {
   BookOpen,
   WifiOff,
   Smartphone,
+  Trash2,
 } from 'lucide-react';
 import { ExamSet } from '../types/exam';
 
@@ -36,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentExam,
   allExams,
   onSelectExam,
+  onDeleteExam,
   examMode,
   onToggleExamMode,
   isSubmitted,
@@ -51,16 +53,17 @@ export const Header: React.FC<HeaderProps> = ({
     (ex) => /^de-0\d+$/.test(ex.id) || ex.id.startsWith('de-custom-')
   );
   const isCurrentLessonExam = !generalExams.some((ex) => ex.id === currentExam.id);
+  const isCustomExam = currentExam.id.startsWith('de-custom-');
 
   return (
     <header className="sticky top-0 z-40 bg-[#070f24]/95 backdrop-blur-md border-b border-sky-950 text-white shadow-lg pt-safe pl-safe pr-safe">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-1.5 md:gap-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-1.5 md:gap-4 min-w-0">
         {/* Zone 1: Brand Wordmark */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-950/60 border border-cyan-400/30">
             <span className="font-mono text-xs sm:text-base font-black">∑11</span>
           </div>
-          <div className="hidden min-[380px]:flex items-center gap-2">
+          <div className="hidden min-[430px]:flex items-center gap-2">
             <span className="text-sm sm:text-lg font-bold tracking-tight text-white whitespace-nowrap">
               Toán 11
             </span>
@@ -72,8 +75,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mục Bài Học (Bên trong mỗi bài có Lý thuyết & 2 Đề Ôn 22 câu) */}
           {onOpenLessons && (
             <button
+              type="button"
               onClick={onOpenLessons}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/20 text-teal-200 border border-teal-400/60 hover:bg-teal-500/30 hover:text-white transition-all whitespace-nowrap font-bold shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/20 text-teal-200 border border-teal-400/60 hover:bg-teal-500/30 hover:text-white transition-colors whitespace-nowrap font-bold shadow-xs cursor-pointer"
               title="Mở danh mục Bài Học SGK Toán 11 (gồm Lý thuyết & 2 Đề ôn cho mỗi bài)"
             >
               <BookOpen className="w-3.5 h-3.5 text-teal-300" />
@@ -104,12 +108,23 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <span className="text-slate-400 italic">Trống</span>
             )}
+            {isCustomExam && onDeleteExam && (
+              <button
+                type="button"
+                onClick={() => onDeleteExam(currentExam.id)}
+                className="p-0.5 text-rose-400 hover:text-rose-300 cursor-pointer"
+                title="Xoá đề tự tạo này"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Tạo Đề Từ File Word / PDF */}
           <button
+            type="button"
             onClick={onOpenImportWord}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 hover:text-white transition-all whitespace-nowrap font-bold cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/20 hover:text-white transition-colors whitespace-nowrap font-bold cursor-pointer"
             title="Tạo đề bằng file Word (.docx) hoặc PDF (.pdf)"
           >
             <FileText className="w-3.5 h-3.5 text-cyan-400" />
@@ -118,8 +133,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Bảng Xếp Hạng */}
           <button
+            type="button"
             onClick={onOpenLeaderboard}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-400/50 hover:bg-amber-500/25 hover:text-white transition-all whitespace-nowrap font-bold shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-400/50 hover:bg-amber-500/25 hover:text-white transition-colors whitespace-nowrap font-bold shadow-xs cursor-pointer"
             title="Xem Bảng Xếp Hạng Thành Tích Học Sinh"
           >
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
@@ -131,8 +147,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Chế độ thi / Luyện tập */}
           <button
+            type="button"
             onClick={onToggleExamMode}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap font-bold cursor-pointer ${
               examMode === 'exam'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
@@ -146,8 +163,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Cài App Điện Thoại & Chế Độ Offline Không Cần Wi-Fi */}
           {onOpenPWAInfo && (
             <button
+              type="button"
               onClick={onOpenPWAInfo}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap font-bold border cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap font-bold border cursor-pointer ${
                 isOnline
                   ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
                   : 'bg-amber-500/20 text-amber-200 border-amber-400/60 hover:bg-amber-500/30'
@@ -164,14 +182,14 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </nav>
 
-        {/* Zone 3: Primary Action & Mobile Controls */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Quick tools on small screens */}
-          <div className="flex lg:hidden items-center gap-1">
+        {/* Zone 3: Mobile Controls (tối ưu vừa khít 375px trên iPhone 8, iPhone X & iPhone XS Max) */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-1 lg:flex-initial min-w-0 justify-end">
+          <div className="flex lg:hidden items-center gap-1 w-full min-w-0 justify-end">
             {onOpenLessons && (
               <button
+                type="button"
                 onClick={onOpenLessons}
-                className="min-h-[36px] px-2.5 py-1.5 flex items-center gap-1 rounded-xl bg-teal-500/20 border border-teal-400/60 text-teal-200 hover:bg-teal-500/30 text-xs font-bold"
+                className="min-h-[36px] px-2 sm:px-2.5 py-1.5 flex items-center gap-1 rounded-xl bg-teal-500/20 border border-teal-400/60 text-teal-200 hover:bg-teal-500/30 text-xs font-bold shrink-0 active:scale-95"
                 title="Mục Bài Học (Lý thuyết & 2 Đề Ôn)"
               >
                 <BookOpen className="w-3.5 h-3.5 text-teal-300 shrink-0" />
@@ -180,11 +198,11 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {allExams.length > 0 && (
-              <div className="flex items-center gap-0.5 bg-[#0b1739] px-2 py-1.5 rounded-xl border border-sky-800/60 text-xs">
+              <div className="flex items-center gap-0.5 bg-[#0b1739] px-1.5 sm:px-2 py-1.5 rounded-xl border border-sky-800/60 text-xs flex-1 min-w-0 max-w-[190px]">
                 <select
                   value={currentExam.id}
                   onChange={(e) => onSelectExam(e.target.value)}
-                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[125px] sm:max-w-[170px] truncate"
+                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer w-full min-w-0 truncate"
                   aria-label="Chọn đề ôn tập"
                 >
                   {isCurrentLessonExam && (
@@ -202,16 +220,18 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             <button
+              type="button"
               onClick={onOpenLeaderboard}
-              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-amber-500/15 border border-amber-400/50 text-amber-300 hover:bg-amber-500/25"
+              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-amber-500/15 border border-amber-400/50 text-amber-300 hover:bg-amber-500/25 shrink-0 active:scale-95"
               title="Bảng Xếp Hạng"
             >
               <Trophy className="w-4 h-4" />
             </button>
 
             <button
+              type="button"
               onClick={onOpenImportWord}
-              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-[#0b1739] border border-sky-800/60 text-cyan-300 hover:bg-sky-900/60"
+              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-[#0b1739] border border-sky-800/60 text-cyan-300 hover:bg-sky-900/60 shrink-0 active:scale-95"
               title="Tạo đề từ Word / PDF"
             >
               <FileText className="w-4 h-4" />
@@ -219,8 +239,9 @@ export const Header: React.FC<HeaderProps> = ({
 
             {onOpenPWAInfo && (
               <button
+                type="button"
                 onClick={onOpenPWAInfo}
-                className={`min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl border ${
+                className={`min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl border shrink-0 active:scale-95 ${
                   isOnline
                     ? 'bg-emerald-950/70 border-emerald-700/60 text-emerald-300'
                     : 'bg-amber-950/80 border-amber-600/70 text-amber-300'
@@ -234,8 +255,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {isSubmitted && (
             <button
+              type="button"
               onClick={onResetExam}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#0b1739] hover:bg-sky-900 border border-sky-800/80 rounded-xl transition-all whitespace-nowrap shadow-sm cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#0b1739] hover:bg-sky-900 border border-sky-800/80 rounded-xl transition-colors whitespace-nowrap shadow-sm cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Làm Lại Đề</span>

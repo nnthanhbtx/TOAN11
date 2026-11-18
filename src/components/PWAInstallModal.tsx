@@ -49,7 +49,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                 Chế Độ Điện Thoại & Không Cần Wi-Fi
               </h3>
               <p className="text-xs text-sky-300">
-                Tương thích hoàn hảo từ iPhone 10 đến iPhone 18 & mọi máy Android
+                Tương thích hoàn hảo từ iPhone 8, iPhone X, XS Max đến iPhone 18 &amp; mọi máy Android
               </p>
             </div>
           </div>
@@ -96,7 +96,7 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
                 {swReady ? 'Đã Lưu Offline 100%' : 'Tự Động Lưu Tiến Độ'}
               </div>
               <div className="text-[11px] opacity-90">
-                Đề thi, công thức LaTeX, hình TikZ & đáp án được lưu trong máy
+                Đề thi, công thức LaTeX, hình TikZ &amp; đáp án được lưu trong máy
               </div>
             </div>
           </div>
@@ -112,22 +112,22 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Làm bài không cần Wi-Fi / 4G:</strong> Toàn bộ 33 bài lý thuyết, 92 đề thi,
+                <strong>Làm bài không cần Wi-Fi / 4G:</strong> Toàn bộ 33 bài lý thuyết, các đề ôn,
                 công thức Toán chuẩn LaTeX và hình vẽ không gian TikZ đều được lưu sẵn vào bộ nhớ điện thoại.
               </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Tự động lưu đáp án & thời gian tức thì:</strong> Khi mất mạng hoặc lỡ tay tải
+                <strong>Tự động lưu đáp án &amp; thời gian tức thì:</strong> Khi mất mạng hoặc lỡ tay tải
                 lại trang trên điện thoại, toàn bộ đáp án và thời gian làm bài vẫn được giữ nguyên.
               </span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <span>
-                <strong>Tối ưu chuẩn cho iPhone 10 đến iPhone 18 & Android:</strong> Hỗ trợ đầy đủ
-                Tai thỏ, Dynamic Island, nút đổi dấu âm <code>±</code> trên bàn phím số iOS và thanh chọn câu nhanh ở đáy màn hình.
+                <strong>Tối ưu chuẩn cho iPhone 8, X, XS Max đến iPhone 18 &amp; Android:</strong> Hỗ trợ
+                màn hình Home Button lẫn Tai thỏ/Dynamic Island, nút đổi dấu âm <code>±</code> trên bàn phím số iOS và thanh chọn câu nhanh ở đáy màn hình.
               </span>
             </li>
           </ul>

@@ -3,29 +3,36 @@ import { Clock, Pause, Play } from 'lucide-react';
 
 interface TimerProps {
   initialMinutes: number;
+  initialElapsedSeconds?: number;
   isRunning: boolean;
   onTimeUp: () => void;
   resetKey?: string | number;
   onElapsedChange?: (elapsedSeconds: number) => void;
+  compact?: boolean;
 }
 
-export const Timer: React.FC<TimerProps> = ({
+export const Timer: React.FC<TimerProps> = React.memo(({
   initialMinutes,
+  initialElapsedSeconds = 0,
   isRunning,
   onTimeUp,
   resetKey,
   onElapsedChange,
+  compact = false,
 }) => {
   const totalInitialSeconds = initialMinutes * 60;
-  const [secondsLeft, setSecondsLeft] = useState(totalInitialSeconds);
+  const [secondsLeft, setSecondsLeft] = useState(() =>
+    Math.max(0, totalInitialSeconds - initialElapsedSeconds)
+  );
   const [isPaused, setIsPaused] = useState(false);
 
   // Reset when initialMinutes or resetKey changes
   useEffect(() => {
-    setSecondsLeft(initialMinutes * 60);
+    const startLeft = Math.max(0, initialMinutes * 60 - initialElapsedSeconds);
+    setSecondsLeft(startLeft);
     setIsPaused(false);
     if (onElapsedChange) {
-      onElapsedChange(0);
+      onElapsedChange(initialElapsedSeconds);
     }
   }, [initialMinutes, resetKey]);
 
@@ -61,9 +68,26 @@ export const Timer: React.FC<TimerProps> = ({
 
   const formatDigits = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border font-mono text-xs font-bold shrink-0 ${
+          isLowTime
+            ? 'bg-rose-950/90 border-rose-500 text-rose-200 animate-pulse'
+            : 'bg-sky-950/80 border-sky-800/70 text-cyan-300'
+        }`}
+      >
+        <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <span className="tabular-nums">
+          {formatDigits(minutes)}:{formatDigits(seconds)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-md ${
+      className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-semibold tracking-wide shadow-md ${
         isLowTime
           ? 'bg-rose-950/80 border-rose-500 text-rose-200 animate-pulse'
           : isRunning
@@ -100,4 +124,4 @@ export const Timer: React.FC<TimerProps> = ({
       )}
     </div>
   );
-};
+});

@@ -564,7 +564,7 @@ function cleanConvertedLatex(latex: string): string {
   if (!s) return '';
 
   s = s
-    .replace(/(?<!\\)\b(sin|cos|tan|cot|ln|log|lim)\b/g, '\\$1')
+    .replace(/(^|[^\\])\b(sin|cos|tan|cot|ln|log|lim)\b/g, '$1\\$2')
     .replace(/\\(sin|cos|tan|cot)\s*\^\s*\{?2\}?/g, '\\$1^2 ')
     .replace(/\s{2,}/g, ' ')
     .trim();

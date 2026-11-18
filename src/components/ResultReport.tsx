@@ -18,6 +18,9 @@ import { formatDuration } from './LeaderboardModal';
 interface ResultReportProps {
   scoreDetail: PartScoreDetail;
   examTitle: string;
+  part1Total?: number;
+  part3Total?: number;
+  part4Total?: number;
   studentName?: string;
   studentClass?: string;
   durationSeconds?: number;
@@ -33,6 +36,9 @@ interface ResultReportProps {
 export const ResultReport: React.FC<ResultReportProps> = ({
   scoreDetail,
   examTitle,
+  part1Total = 12,
+  part3Total = 4,
+  part4Total = 4,
   studentName,
   studentClass,
   durationSeconds,
@@ -212,10 +218,10 @@ export const ResultReport: React.FC<ResultReportProps> = ({
           <div className="text-xs font-bold text-cyan-300">Phần I: Trắc nghiệm 4 lựa chọn</div>
           <div className="text-2xl font-black font-mono text-white tabular-nums">
             {scoreDetail.part1Score}
-            <span className="text-sm text-sky-400 font-normal"> / 3.0đ</span>
+            <span className="text-sm text-sky-400 font-normal"> / {scoreDetail.part1Max}đ</span>
           </div>
           <div className="text-xs text-sky-300">
-            Đúng {scoreDetail.part1CorrectCount}/12 câu (0.25đ/câu)
+            Đúng {scoreDetail.part1CorrectCount}/{part1Total} câu (0.25đ/câu)
           </div>
         </div>
 
@@ -233,13 +239,13 @@ export const ResultReport: React.FC<ResultReportProps> = ({
 
         {/* Phần III */}
         <div className="p-4 rounded-2xl bg-[#0b1739] border border-sky-800/60 space-y-1.5 shadow-md">
-          <div className="text-xs font-bold text-cyan-300">Phần III: Trả lời ngắn (4 câu)</div>
+          <div className="text-xs font-bold text-cyan-300">Phần III: Trả lời ngắn ({part3Total} câu)</div>
           <div className="text-2xl font-black font-mono text-white tabular-nums">
             {scoreDetail.part3Score}
             <span className="text-sm text-sky-400 font-normal"> / {scoreDetail.part3Max}đ</span>
           </div>
           <div className="text-xs text-sky-300">
-            Đúng {scoreDetail.part3CorrectCount}/4 câu (0.5đ/câu)
+            Đúng {scoreDetail.part3CorrectCount}/{part3Total} câu (0.5đ/câu)
           </div>
         </div>
 
@@ -251,7 +257,7 @@ export const ResultReport: React.FC<ResultReportProps> = ({
             <span className="text-sm text-sky-400 font-normal"> / {scoreDetail.part4Max}đ</span>
           </div>
           <div className="text-xs text-sky-300">
-            Sắp xếp logic 4 bài tự luận
+            Sắp xếp logic {part4Total} bài tự luận
           </div>
         </div>
       </div>

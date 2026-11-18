@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, Suspense } from 'react';
 import { examSets } from './data/examSets';
 import {
   textbookChapters,
@@ -27,7 +27,9 @@ import { Part2TrueFalse } from './components/Part2TrueFalse';
 import { Part3ShortAnswer } from './components/Part3ShortAnswer';
 import { Part4StepOrdering } from './components/Part4StepOrdering';
 import { ResultReport } from './components/ResultReport';
-import { ImportWordModal } from './components/ImportWordModal';
+const ImportWordModal = React.lazy(() =>
+  import('./components/ImportWordModal').then((m) => ({ default: m.ImportWordModal }))
+);
 import { LessonCatalogModal } from './components/LessonCatalogModal';
 import {
   LeaderboardModal,
@@ -285,7 +287,30 @@ export default function App() {
 
   const examStartTimeRef = useRef<number | null>(null);
   const lastFormInteractionRef = useRef<number>(0);
-  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState<number>(() => {
+  const isSubmittingRef = useRef<boolean>(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktopViewport(e.matches);
+    setIsDesktopViewport(mql.matches);
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    } else if (typeof (mql as MediaQueryList & { addListener?: (fn: (e: MediaQueryListEvent) => void) => void }).addListener === 'function') {
+      const legacyMql = mql as MediaQueryList & {
+        addListener: (fn: (e: MediaQueryListEvent) => void) => void;
+        removeListener: (fn: (e: MediaQueryListEvent) => void) => void;
+      };
+      legacyMql.addListener(onChange);
+      return () => legacyMql.removeListener(onChange);
+    }
+  }, []);
+  const timerElapsedSecondsRef = useRef<number>((() => {
     try {
       const savedProgress = localStorage.getItem(ACTIVE_PROGRESS_STORAGE_KEY);
       if (savedProgress) {
@@ -302,9 +327,19 @@ export default function App() {
       // ignore
     }
     return 0;
-  });
+  })());
   const [submittedDurationSeconds, setSubmittedDurationSeconds] = useState<number>(0);
   const studentNameInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleTimerElapsedChange = React.useCallback((elapsed: number) => {
+    timerElapsedSecondsRef.current = elapsed;
+  }, []);
+
+  useEffect(() => {
+    if (isExamStarted && !isSubmitted && !examStartTimeRef.current) {
+      examStartTimeRef.current = Date.now() - timerElapsedSecondsRef.current * 1000;
+    }
+  }, [isExamStarted, isSubmitted]);
 
   // Initialize student answers
   const initializeAnswers = (exam: ExamSet): StudentAnswers => {
@@ -373,7 +408,7 @@ export default function App() {
             interactedPart4: Array.from(interactedPart4),
             bookmarked: Array.from(bookmarkedQuestions),
             violations,
-            timerElapsedSeconds,
+            timerElapsedSeconds: timerElapsedSecondsRef.current,
           })
         );
       }
@@ -388,7 +423,6 @@ export default function App() {
     interactedPart4,
     bookmarkedQuestions,
     violations,
-    timerElapsedSeconds,
   ]);
 
   // Chức năng âm thanh chỉ hoạt động khi học sinh bắt đầu làm bài được tính giờ
@@ -430,7 +464,7 @@ export default function App() {
 
       const elapsed = examStartTimeRef.current
         ? Math.max(1, Math.round((now - examStartTimeRef.current) / 1000))
-        : timerElapsedSeconds;
+        : timerElapsedSecondsRef.current;
 
       const newViolation: ExamViolation = {
         id: `vio-${now}`,
@@ -465,7 +499,11 @@ export default function App() {
     };
 
     // 2. Phát hiện mở cửa sổ nổi (Pop-up AI / ChatGPT / Gemini), chia đôi màn hình hoặc che một góc màn hình làm mất tiêu điểm
+    // Trên màn hình điện thoại nhỏ (< 768px), iOS Safari native picker / bàn phím tự điền thường gây blur tạm thời nên ưu tiên visibilitychange & copy
     const handleWindowBlur = () => {
+      if (window.innerWidth < 768) {
+        return;
+      }
       setTimeout(() => {
         if (document.hidden || document.visibilityState === 'hidden') {
           return; // Đã được xử lý bởi visibilitychange
@@ -512,10 +550,11 @@ export default function App() {
         base.height = currentH;
       }
 
-      const isMobileScreen = currentW < 1024;
-      const heightRatioThreshold = isMobileScreen ? 0.55 : 0.82;
+      const isPhoneScreen = currentW < 768;
+      const widthRatioThreshold = isPhoneScreen ? 0.78 : 0.86;
+      const heightRatioThreshold = isPhoneScreen ? 0.45 : currentW < 1024 ? 0.65 : 0.82;
 
-      if (currentW < base.width * 0.86 || currentH < base.height * heightRatioThreshold) {
+      if (currentW < base.width * widthRatioThreshold || currentH < base.height * heightRatioThreshold) {
         recordViolation(
           'split_or_overlay_ai',
           'Chia đôi màn hình hoặc thu hẹp góc màn hình để sử dụng công cụ AI giải bài'
@@ -550,7 +589,7 @@ export default function App() {
       window.removeEventListener('resize', handleViewportResize);
       document.removeEventListener('copy', handleCopyAttempt);
     };
-  }, [isExamStarted, isSubmitted, timerElapsedSeconds]);
+  }, [isExamStarted, isSubmitted]);
 
   const resultReportRef = useRef<HTMLDivElement | null>(null);
   const questionsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -567,6 +606,7 @@ export default function App() {
 
   const resetSessionState = (targetExam: ExamSet) => {
     setAudioEnabled(false);
+    isSubmittingRef.current = false;
     const freshAnswers = initializeAnswers(targetExam);
     setAnswers(freshAnswers);
     setIsExamStarted(false);
@@ -576,7 +616,7 @@ export default function App() {
     setInteractedPart4(new Set());
     setActiveFilterPart('all');
     examStartTimeRef.current = null;
-    setTimerElapsedSeconds(0);
+    timerElapsedSecondsRef.current = 0;
     setSubmittedDurationSeconds(0);
     setViolations([]);
     setLatestViolation(null);
@@ -586,6 +626,9 @@ export default function App() {
       localStorage.removeItem(ACTIVE_PROGRESS_STORAGE_KEY);
     } catch {
       // ignore
+    }
+    if (typeof window !== 'undefined' && window.scrollY > 80) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -656,6 +699,8 @@ export default function App() {
 
   // Submit test
   const handleFinalSubmit = () => {
+    if (isSubmitted || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     stopSpeech();
     setShowSubmitConfirm(false);
     const result = calculateScore(currentExam, answers);
@@ -667,7 +712,11 @@ export default function App() {
       ? Math.max(5, Math.round((Date.now() - examStartTimeRef.current) / 1000))
       : 0;
     const elapsedSeconds =
-      timerElapsedSeconds > 0 ? timerElapsedSeconds : wallElapsed > 0 ? wallElapsed : 1200;
+      timerElapsedSecondsRef.current > 0
+        ? timerElapsedSecondsRef.current
+        : wallElapsed > 0
+        ? wallElapsed
+        : 1200;
 
     setSubmittedDurationSeconds(elapsedSeconds);
 
@@ -752,15 +801,25 @@ export default function App() {
     return idx >= 0 ? idx + 1 : undefined;
   }, [sortedAllEntries]);
 
+  const examScoresByExamId = useMemo(() => {
+    const map: Record<string, number> = {};
+    leaderboardEntries.forEach((entry) => {
+      if (entry.examId && (map[entry.examId] === undefined || entry.totalScore > map[entry.examId])) {
+        map[entry.examId] = entry.totalScore;
+      }
+    });
+    return map;
+  }, [leaderboardEntries]);
+
   // Navigation scroll helper
   const handleNavigateQuestion = (part: ExamPart, index: number) => {
     setActiveFilterPart('all');
     setTimeout(() => {
       const el = document.getElementById(`q-${part}-${index}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 50);
+    }, 100);
   };
 
   // Count answered questions accurately
@@ -781,7 +840,7 @@ export default function App() {
   }, [answers, currentExam, interactedPart4, isSubmitted]);
 
   return (
-    <div className="min-h-screen bg-[#040817] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen min-h-[100dvh] bg-[#040817] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950">
       {/* Header */}
       <Header
         currentExam={currentExam}
@@ -888,13 +947,14 @@ export default function App() {
 
           {/* Exam Timer & Start / Submit Button (Desktop; trên điện thoại đã có thanh cố định phía dưới) */}
           <div className="hidden lg:flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-end ml-auto shrink-0">
-            {examMode === 'exam' && isExamStarted && !isSubmitted && (
+            {isDesktopViewport && examMode === 'exam' && isExamStarted && !isSubmitted && (
               <Timer
                 initialMinutes={currentExam.durationMinutes}
+                initialElapsedSeconds={timerElapsedSecondsRef.current}
                 isRunning={isExamStarted && !isSubmitted}
                 onTimeUp={handleFinalSubmit}
                 resetKey={`${currentExam.id}-${examSessionKey}`}
-                onElapsedChange={setTimerElapsedSeconds}
+                onElapsedChange={handleTimerElapsedChange}
               />
             )}
 
@@ -931,6 +991,9 @@ export default function App() {
             <ResultReport
               scoreDetail={scoreDetail}
               examTitle={currentExam.title}
+              part1Total={currentExam.part1.length}
+              part3Total={currentExam.part3.length}
+              part4Total={currentExam.part4?.length || 0}
               studentName={studentName}
               studentClass={studentClass}
               durationSeconds={submittedDurationSeconds}
@@ -1236,15 +1299,15 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Dòng 2: Lớp */}
+                {/* Dòng 2: Lớp + Chọn nhanh 1 chạm */}
                 <div className="grid grid-cols-12 items-center">
                   <label
                     htmlFor="student-class-input"
-                    className="col-span-4 px-3.5 py-3 text-xs sm:text-sm font-bold text-sky-200 bg-[#08132f] border-r border-sky-800/90"
+                    className="col-span-4 px-3.5 py-3 text-xs sm:text-sm font-bold text-sky-200 bg-[#08132f] border-r border-sky-800/90 h-full flex items-center"
                   >
-                    Lớp <span className="text-rose-400">*</span>
+                    Lớp <span className="text-rose-400 ml-1">*</span>
                   </label>
-                  <div className="col-span-8 px-3 py-2">
+                  <div className="col-span-8 px-3 py-2 space-y-2">
                     <input
                       id="student-class-input"
                       type="text"
@@ -1256,6 +1319,25 @@ export default function App() {
                       placeholder="Ví dụ: 11A1"
                       className="w-full px-2.5 py-1.5 rounded-lg bg-[#071126] border border-sky-700/80 text-sm font-semibold text-amber-300 placeholder-sky-400/50 focus:outline-none focus:border-cyan-400"
                     />
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {QUICK_CLASSES.map((cls) => (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => {
+                            setStudentClass(cls);
+                            if (studentInfoError) setStudentInfoError('');
+                          }}
+                          className={`px-2 py-1 rounded-md text-[11px] font-bold transition-colors duration-100 active:scale-95 ${
+                            studentClass === cls
+                              ? 'bg-amber-400 text-[#040817]'
+                              : 'bg-[#071126] text-sky-300 border border-sky-800 hover:border-cyan-400'
+                          }`}
+                        >
+                          {cls}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1484,13 +1566,17 @@ export default function App() {
         </div>
       )}
 
-      {/* Import Word Modal */}
-      <ImportWordModal
-        isOpen={isImportWordOpen}
-        onClose={() => setIsImportWordOpen(false)}
-        onApplyExam={handleApplyWordExam}
-        defaultTitle="Đề tự luyện"
-      />
+      {/* Import Word Modal (Lazy-loaded để iPhone 8/X/XS Max khởi động tức thì) */}
+      {isImportWordOpen && (
+        <Suspense fallback={null}>
+          <ImportWordModal
+            isOpen={isImportWordOpen}
+            onClose={() => setIsImportWordOpen(false)}
+            onApplyExam={handleApplyWordExam}
+            defaultTitle="Đề tự luyện"
+          />
+        </Suspense>
+      )}
 
       {/* Leaderboard Modal */}
       <LeaderboardModal
@@ -1512,6 +1598,7 @@ export default function App() {
         onClose={() => setIsLessonModalOpen(false)}
         chapters={textbookChapters}
         currentExamId={currentExam.id}
+        examScoresByExamId={examScoresByExamId}
         onSelectPracticeExam={(examId) => {
           handleSelectExam(examId);
           setIsLessonModalOpen(false);
@@ -1595,40 +1682,44 @@ export default function App() {
         </div>
       )}
 
-      {/* Thanh Điều Hướng Nhanh Cố Định Đáy Màn Hình Điện Thoại (lg:hidden) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#070f24]/95 backdrop-blur-md border-t border-sky-900/80 px-3 py-2 pb-safe shadow-2xl no-print">
+      {/* Thanh Điều Hướng Nhanh Cố Định Đáy Màn Hình Điện Thoại (lg:hidden) - Tối ưu iPhone 10 đến iPhone 18 */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-[#070f24]/95 backdrop-blur-md border-t border-sky-900/80 px-2.5 py-2 pb-safe shadow-2xl no-print">
         <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
           {/* Nút Mở Phiếu Trả Lời Nhanh */}
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(true)}
-            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0b1739] hover:bg-sky-900 border border-sky-700/80 text-white flex items-center gap-2 text-xs font-bold active:scale-95 transition-transform"
+            className="min-h-[44px] px-3 py-2 rounded-xl bg-[#0b1739] hover:bg-sky-900 border border-sky-700/80 text-white flex items-center gap-1.5 text-xs font-bold active:scale-95 transition-transform duration-100 shrink-0"
           >
             <LayoutGrid className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>
-              Phiếu TL:{' '}
+              Phiếu:{' '}
               <strong className="text-amber-300 font-mono">
                 {totalAnswered}/{totalExamQuestions}
               </strong>
             </span>
           </button>
 
-          {/* Hiển thị thời gian đã làm / trạng thái ở giữa trên ĐT */}
-          {isExamStarted && !isSubmitted && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-sky-950/80 border border-sky-800/70 text-cyan-300 font-mono text-xs font-bold">
-              <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>
-                {Math.floor(
-                  Math.max(0, currentExam.durationMinutes * 60 - timerElapsedSeconds) / 60
-                )
-                  .toString()
-                  .padStart(2, '0')}
-                :
-                {(Math.max(0, currentExam.durationMinutes * 60 - timerElapsedSeconds) % 60)
-                  .toString()
-                  .padStart(2, '0')}
-              </span>
-            </div>
+          {/* Nút mở nhanh Bài Học (khi chưa bắt đầu thi hoặc chế độ luyện tập) hoặc Đồng hồ đếm ngược độc lập (khi đang thi tính giờ) */}
+          {!isDesktopViewport && examMode === 'exam' && isExamStarted && !isSubmitted ? (
+            <Timer
+              compact
+              initialMinutes={currentExam.durationMinutes}
+              initialElapsedSeconds={timerElapsedSecondsRef.current}
+              isRunning={isExamStarted && !isSubmitted}
+              onTimeUp={handleFinalSubmit}
+              resetKey={`mobile-${currentExam.id}-${examSessionKey}`}
+              onElapsedChange={handleTimerElapsedChange}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsLessonModalOpen(true)}
+              className="min-h-[44px] px-3 py-2 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 flex items-center gap-1.5 text-xs font-extrabold active:scale-95 transition-transform duration-100 shrink-0"
+            >
+              <BookOpen className="w-4 h-4 text-amber-300 shrink-0" />
+              <span>Bài Học</span>
+            </button>
           )}
 
           {/* Nút Hành Động Chính (Bắt Đầu / Nộp Bài / Làm Lại) */}
@@ -1636,7 +1727,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleResetExam}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-cyan-500 text-[#040817] font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-cyan-500 text-[#040817] font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-transform duration-100"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Làm Lại</span>
@@ -1645,16 +1736,16 @@ export default function App() {
             <button
               type="button"
               onClick={handleStartExam}
-              className="flex-1 min-h-[44px] px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-300 text-[#040817] font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95"
+              className="flex-1 min-h-[44px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-300 text-[#040817] font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform duration-100"
             >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Bắt Đầu Làm Bài</span>
+              <Play className="w-4 h-4 fill-current shrink-0" />
+              <span className="truncate">Bắt Đầu Làm</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => setShowSubmitConfirm(true)}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95 transition-transform duration-100"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Nộp Bài</span>

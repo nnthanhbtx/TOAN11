@@ -105,6 +105,10 @@ export default defineConfig(() => {
         },
       }),
     ],
+    build: {
+      target: ['es2019', 'safari13', 'ios13', 'chrome80'],
+      cssTarget: 'safari13',
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

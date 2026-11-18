@@ -7,16 +7,23 @@ let audioCtx: AudioContext | null = null;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextClass) {
-      audioCtx = new AudioContextClass();
+  try {
+    if (!audioCtx) {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+      }
     }
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      const p = audioCtx.resume();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {});
+      }
+    }
+  } catch {
+    return null;
   }
   return audioCtx;
 }
@@ -234,7 +241,8 @@ export function playWrongSound(): void {
         const lfoGain = ctx.createGain();
         lfo.frequency.setValueAtTime(5.5, startTime); // 5.5Hz vibrato
         lfoGain.gain.setValueAtTime(7, startTime);
-        lfo.connect(osc.frequency);
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
         lfo.start(startTime + 0.1);
         lfo.stop(startTime + d);
       }
@@ -375,45 +383,58 @@ export function speakQuestion(
 ): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
-  stopSpeech();
+  try {
+    stopSpeech();
 
-  const cleaned = cleanMathForSpeech(text);
-  const utterance = new SpeechSynthesisUtterance(cleaned);
-  utterance.lang = 'vi-VN';
-  utterance.rate = 0.95;
-  utterance.pitch = 1.0;
+    const cleaned = cleanMathForSpeech(text);
+    const utterance = new SpeechSynthesisUtterance(cleaned);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
 
-  const voices = window.speechSynthesis.getVoices();
-  const viVoice = voices.find((v) => v.lang.includes('vi') || v.lang.includes('VIE'));
-  if (viVoice) {
-    utterance.voice = viVoice;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const viVoice = voices.find((v) => v.lang.includes('vi') || v.lang.includes('VIE'));
+    if (viVoice) {
+      utterance.voice = viVoice;
+    }
+
+    utterance.onstart = () => {
+      onStart?.();
+    };
+
+    utterance.onend = () => {
+      currentUtterance = null;
+      onEnd?.();
+    };
+
+    utterance.onerror = () => {
+      currentUtterance = null;
+      onEnd?.();
+    };
+
+    currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    currentUtterance = null;
+    onEnd?.();
   }
-
-  utterance.onstart = () => {
-    onStart?.();
-  };
-
-  utterance.onend = () => {
-    currentUtterance = null;
-    onEnd?.();
-  };
-
-  utterance.onerror = () => {
-    currentUtterance = null;
-    onEnd?.();
-  };
-
-  currentUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
 }
 
 export function stopSpeech(): void {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    // ignore
+  }
   currentUtterance = null;
 }
 
 export function isSpeaking(): boolean {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
-  return window.speechSynthesis.speaking;
+  try {
+    return window.speechSynthesis.speaking;
+  } catch {
+    return false;
+  }
 }

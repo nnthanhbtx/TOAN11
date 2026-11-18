@@ -1,17 +1,23 @@
-import * as pdfjsLib from 'pdfjs-dist';
 import {
   normalizeMathExpressionsToLatex,
   replacePuaSymbols,
 } from './docxMathExtractor';
 
-// Cấu hình worker cho pdfjs-dist trong Vite
-try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-  ).toString();
-} catch {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+let cachedPdfjsLib: any = null;
+
+async function getPdfjsLib() {
+  if (cachedPdfjsLib) return cachedPdfjsLib;
+  const pdfjsLib = await import('pdfjs-dist');
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url
+    ).toString();
+  } catch {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  }
+  cachedPdfjsLib = pdfjsLib;
+  return pdfjsLib;
 }
 
 /**
@@ -32,6 +38,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
  * Trích xuất văn bản & tái tạo công thức Toán học (số mũ, chỉ số dưới, ký hiệu Symbol) trực tiếp từ file PDF trên trình duyệt (< 0.25s)
  */
 export async function extractTextFromPdfLocal(arrayBuffer: ArrayBuffer): Promise<string> {
+  const pdfjsLib = await getPdfjsLib();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;
   const pageTexts: string[] = [];

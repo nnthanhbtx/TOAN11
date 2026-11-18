@@ -171,7 +171,31 @@ function preprocessRawMathContent(input: string): string {
   return s;
 }
 
-export const MathRenderer: React.FC<MathRendererProps> = ({
+const katexHtmlCache = new Map<string, string>();
+
+function renderCachedKatex(cleanMath: string, isDisplay: boolean): string {
+  const cacheKey = `${isDisplay ? 'D:' : 'I:'}${cleanMath}`;
+  const cached = katexHtmlCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const html = katex.renderToString(cleanMath, {
+    displayMode: isDisplay,
+    throwOnError: false,
+    errorColor: 'currentColor',
+    strict: false,
+    trust: true,
+    macros: KATEX_MACROS,
+    output: 'htmlAndMathml',
+  });
+
+  if (katexHtmlCache.size > 4000) {
+    katexHtmlCache.clear();
+  }
+  katexHtmlCache.set(cacheKey, html);
+  return html;
+}
+
+export const MathRenderer: React.FC<MathRendererProps> = React.memo(({
   content,
   className = '',
 }) => {
@@ -292,15 +316,7 @@ export const MathRenderer: React.FC<MathRendererProps> = ({
         const boldClass = isBoldActive ? 'font-bold text-amber-200/95' : '';
 
         try {
-          const html = katex.renderToString(cleanMath, {
-            displayMode: isDisplay,
-            throwOnError: false,
-            errorColor: 'currentColor',
-            strict: false,
-            trust: true,
-            macros: KATEX_MACROS,
-            output: 'htmlAndMathml',
-          });
+          const html = renderCachedKatex(cleanMath, isDisplay);
 
           return isDisplay ? (
             <span
@@ -328,4 +344,5 @@ export const MathRenderer: React.FC<MathRendererProps> = ({
       })}
     </span>
   );
-};
+});
+

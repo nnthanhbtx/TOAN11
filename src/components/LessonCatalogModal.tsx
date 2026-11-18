@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   BookOpen,
   ChevronRight,
@@ -24,14 +24,16 @@ interface LessonCatalogModalProps {
   chapters: TextbookChapter[];
   currentExamId: string;
   onSelectPracticeExam: (examId: string) => void;
+  examScoresByExamId?: Record<string, number>;
 }
 
-export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
+export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = React.memo(({
   isOpen,
   onClose,
   chapters,
   currentExamId,
   onSelectPracticeExam,
+  examScoresByExamId = {},
 }) => {
   // Chỉ lấy 33 bài học chính khoá theo SGK (không lấy bài ôn tập cuối chương)
   const cleanChapters = useMemo(
@@ -50,6 +52,20 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
     cleanChapters[0]?.lessons[0]?.id || 'bai-1'
   );
   const [activeTab, setActiveTab] = useState<'theory' | 'exams'>('theory');
+
+  // Tự động đồng bộ tới Chương & Bài Học đang làm khi mở mục Bài Học
+  useEffect(() => {
+    if (!isOpen) return;
+    for (const ch of cleanChapters) {
+      for (const lesson of ch.lessons) {
+        if (lesson.practiceExams.some((ex) => ex.id === currentExamId)) {
+          setSelectedChapterId(ch.id);
+          setSelectedLessonId(lesson.id);
+          return;
+        }
+      }
+    }
+  }, [isOpen, currentExamId, cleanChapters]);
 
   if (!isOpen) return null;
 
@@ -71,32 +87,33 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 pt-safe pb-safe">
-      <div className="relative w-full max-w-6xl h-[92vh] h-[92dvh] flex flex-col rounded-2xl border border-teal-500/30 bg-[#0d1f38] text-slate-100 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150 pt-safe pb-safe">
+      <div className="relative w-full max-w-6xl h-[94vh] h-[94dvh] flex flex-col rounded-2xl border border-teal-500/30 bg-[#0d1f38] text-slate-100 shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-slate-800/80 bg-[#0a1628] shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-800/80 bg-[#0a1628] shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center text-slate-950 shadow-md shrink-0">
               <BookOpen className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                <h2 className="text-sm sm:text-lg font-bold text-white tracking-tight truncate">
                   Bài Học SGK Toán 11 (Lý Thuyết &amp; 2 Đề Ôn)
                 </h2>
-                <span className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-md bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-md bg-teal-500/15 text-teal-300 border border-teal-500/30">
                   Kết Nối Tri Thức Với Cuộc Sống
                 </span>
               </div>
-              <p className="text-xs text-slate-400 truncate mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">
                 Mỗi bài học gồm Mục Lý thuyết &amp; Công thức chuẩn SGK và 2 Đề ôn tập (22 câu/đề)
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors shrink-0 cursor-pointer"
+            className="min-w-[40px] min-h-[40px] p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors duration-100 shrink-0 cursor-pointer flex items-center justify-center active:scale-95"
             title="Đóng"
           >
             <X className="w-5 h-5" />
@@ -104,15 +121,16 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
         </div>
 
         {/* Chapter Horizontal Tabs */}
-        <div className="px-3 sm:px-6 py-2 bg-[#091526] border-b border-slate-800/80 overflow-x-auto no-scrollbar shrink-0">
+        <div className="px-2.5 sm:px-6 py-2 bg-[#091526] border-b border-slate-800/80 overflow-x-auto no-scrollbar shrink-0">
           <div className="flex items-center gap-1.5 min-w-max">
             {cleanChapters.map((chapter) => {
               const isSelected = chapter.id === activeChapter?.id;
               return (
                 <button
                   key={chapter.id}
+                  type="button"
                   onClick={() => handleChapterChange(chapter)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`min-h-[38px] flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors duration-100 cursor-pointer active:scale-95 ${
                     isSelected
                       ? 'bg-teal-500 text-slate-950 shadow-sm shadow-teal-500/20'
                       : 'bg-slate-900/90 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
@@ -135,25 +153,51 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
           </div>
         </div>
 
-        {/* Active Chapter Banner */}
+        {/* Mobile Quick Lesson Horizontal Selector (chỉ hiện trên điện thoại để tiết kiệm tối đa diện tích đọc Lý thuyết) */}
+        <div className="md:hidden px-2.5 py-2 bg-[#0b192e] border-b border-slate-800/80 overflow-x-auto no-scrollbar shrink-0">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {activeChapter?.lessons.map((lesson) => {
+              const isSelected = lesson.id === activeLesson?.id;
+              return (
+                <button
+                  key={lesson.id}
+                  type="button"
+                  onClick={() => setSelectedLessonId(lesson.id)}
+                  className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold transition-colors duration-100 flex items-center gap-1.5 active:scale-95 ${
+                    isSelected
+                      ? 'bg-amber-400 text-slate-950 shadow-sm font-black'
+                      : 'bg-slate-900 text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  <span>{lesson.lessonNumber}</span>
+                  <span className="max-w-[140px] truncate font-medium opacity-90">
+                    {lesson.fullName.replace(/^Bài \d+\.\s*/, '')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active Chapter Banner (Desktop) */}
         {activeChapter && (
-          <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-teal-950/50 via-slate-900/60 to-slate-900/60 border-b border-slate-800/60 flex items-center justify-between gap-2 shrink-0">
+          <div className="hidden sm:flex px-4 sm:px-6 py-2 bg-gradient-to-r from-teal-950/50 via-slate-900/60 to-slate-900/60 border-b border-slate-800/60 items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <GraduationCap className="w-4 h-4 text-teal-400 shrink-0" />
               <span className="text-xs sm:text-sm font-bold text-teal-300 truncate">
                 {activeChapter.code}: {activeChapter.title}
               </span>
             </div>
-            <span className="text-[11px] text-slate-400 shrink-0 hidden sm:inline">
+            <span className="text-[11px] text-slate-400 shrink-0">
               Chọn bài học để xem Lý thuyết hoặc làm 2 Đề ôn
             </span>
           </div>
         )}
 
-        {/* Main Content Grid: Left = Lesson List (Bài 1..Bài 33), Right = Inside Selected Lesson (Mục Lý thuyết & 2 Đề ôn) */}
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-800/80 overflow-hidden">
-          {/* Left Column: Danh mục Bài học trong Chương */}
-          <div className="md:col-span-4 p-3 sm:p-4 bg-[#0b192e]/60 overflow-y-auto max-h-[30vh] md:max-h-none space-y-2">
+        {/* Main Content Grid: Left = Lesson List on Desktop (md:col-span-4), Right = Inside Selected Lesson (Mục Lý thuyết & 2 Đề ôn) */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 md:divide-x divide-slate-800/80 overflow-hidden">
+          {/* Left Column: Danh mục Bài học trong Chương (Desktop/Tablet) */}
+          <div className="hidden md:block md:col-span-4 p-3 sm:p-4 bg-[#0b192e]/60 overflow-y-auto space-y-2">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 pb-1 flex items-center justify-between">
               <span>Danh sách bài học ({activeChapter?.lessons.length || 0} bài)</span>
               <span>Trang SGK</span>
@@ -168,8 +212,9 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
               return (
                 <button
                   key={lesson.id}
+                  type="button"
                   onClick={() => setSelectedLessonId(lesson.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all flex items-start justify-between gap-2 cursor-pointer ${
+                  className={`w-full text-left p-3 rounded-xl border transition-colors duration-100 flex items-start justify-between gap-2 cursor-pointer ${
                     isSelected
                       ? 'bg-teal-500/15 border-teal-400/60 text-white shadow-sm'
                       : 'bg-slate-900/60 border-slate-800/80 text-slate-300 hover:bg-slate-800/60 hover:border-slate-700'
@@ -223,53 +268,80 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
           <div className="md:col-span-8 bg-[#0d1f38] flex flex-col min-h-0 overflow-hidden">
             {activeLesson ? (
               <>
-                {/* Sticky Lesson Header + 2 Sub-tabs (Mục Lý thuyết | 2 Đề ôn) */}
-                <div className="px-4 sm:px-6 py-3.5 bg-[#0a182d] border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                {/* Sticky Lesson Header + 2 Sub-tabs (Mục Lý thuyết | 2 Đề ôn) + 1-Tap Quick Exam Launch */}
+                <div className="px-3.5 sm:px-6 py-2.5 sm:py-3.5 bg-[#0a182d] border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
                         {activeChapter?.code}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-300">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-slate-800 text-slate-300">
                         SGK Trang {activeLesson.pageNumber}
                       </span>
                     </div>
-                    <h3 className="text-base sm:text-lg font-extrabold text-white leading-snug truncate">
+                    <h3 className="text-sm sm:text-lg font-extrabold text-white leading-snug truncate">
                       {activeLesson.fullName}
                     </h3>
                   </div>
 
-                  {/* 2 Mục bên trong mỗi bài học: Mục Lý thuyết & 2 Đề ôn */}
-                  <div className="flex items-center gap-1.5 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('theory')}
-                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                        activeTab === 'theory'
-                          ? 'bg-amber-400 text-slate-950 shadow-sm'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-900'
-                      }`}
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>Mục Lý Thuyết</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('exams')}
-                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                        activeTab === 'exams'
-                          ? 'bg-teal-400 text-slate-950 shadow-sm'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-900'
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>2 Đề Ôn ({activeLesson.practiceExams.length} đề)</span>
-                    </button>
+                  {/* 2 Mục bên trong mỗi bài học: Mục Lý thuyết & 2 Đề ôn + Nút mở nhanh Đề 1, Đề 2 bằng 1 chạm */}
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                    <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('theory')}
+                        className={`min-h-[36px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors duration-100 cursor-pointer active:scale-95 ${
+                          activeTab === 'theory'
+                            ? 'bg-amber-400 text-slate-950 shadow-sm'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                        }`}
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Lý Thuyết</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('exams')}
+                        className={`min-h-[36px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors duration-100 cursor-pointer active:scale-95 ${
+                          activeTab === 'exams'
+                            ? 'bg-teal-400 text-slate-950 shadow-sm'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>2 Đề Ôn</span>
+                      </button>
+                    </div>
+
+                    {/* 1-tap quick launch Đề 01 / Đề 02 */}
+                    {activeLesson.practiceExams.map((ex, idx) => {
+                      const isThisActive = ex.id === currentExamId;
+                      const bestScore = examScoresByExamId[ex.id];
+                      return (
+                        <button
+                          key={ex.id}
+                          type="button"
+                          onClick={() => onSelectPracticeExam(ex.id)}
+                          className={`min-h-[36px] px-2.5 py-1.5 rounded-xl border text-xs font-extrabold flex items-center gap-1 transition-colors duration-100 cursor-pointer active:scale-95 ${
+                            isThisActive
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-sm'
+                              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                          }`}
+                          title={`Làm ngay ${ex.title}`}
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          <span>
+                            Đề 0{idx + 1}
+                            {typeof bestScore === 'number' ? ` (${bestScore}đ)` : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Scrollable Body of the Selected Lesson */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+                <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-5">
                   {activeTab === 'theory' && activeLessonTheory ? (
                     <div className="space-y-5">
                       {/* Khái niệm & Yêu cầu cần đạt */}
@@ -430,14 +502,19 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
                         <div className="text-xs sm:text-sm text-teal-200 font-semibold">
                           Đã nắm vững lý thuyết {activeLesson.lessonNumber}? Luyện tập ngay với 2 đề ôn chuẩn cấu trúc:
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('exams')}
-                          className="px-4 py-2 rounded-xl bg-teal-400 hover:bg-teal-300 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Mở 2 Đề Ôn ({activeLesson.lessonNumber})</span>
-                        </button>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          {activeLesson.practiceExams.map((ex, idx) => (
+                            <button
+                              key={ex.id}
+                              type="button"
+                              onClick={() => onSelectPracticeExam(ex.id)}
+                              className="flex-1 sm:flex-initial min-h-[42px] px-4 py-2 rounded-xl bg-teal-400 hover:bg-teal-300 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer transition-colors duration-100 active:scale-95"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Làm Đề 0{idx + 1}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -457,7 +534,7 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
                         return (
                           <div
                             key={practiceExam.id}
-                            className={`rounded-2xl border p-4 sm:p-5 shadow-lg transition-all ${
+                            className={`rounded-2xl border p-4 sm:p-5 shadow-lg transition-colors ${
                               isThisExamActive
                                 ? 'border-emerald-400/70 bg-gradient-to-br from-emerald-950/50 via-slate-900/90 to-slate-900'
                                 : 'border-teal-500/40 bg-gradient-to-br from-teal-950/40 via-slate-900/90 to-slate-900'
@@ -519,8 +596,9 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
                             </div>
 
                             <button
+                              type="button"
                               onClick={() => onSelectPracticeExam(practiceExam.id)}
-                              className="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 shadow-md shadow-teal-950/50 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                              className="w-full min-h-[46px] py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 shadow-md shadow-teal-950/50 flex items-center justify-center gap-2 transition-colors duration-100 cursor-pointer active:scale-[0.99]"
                             >
                               <Play className="w-4 h-4 fill-current" />
                               <span>Làm {practiceExam.title} (22 Câu Hỏi)</span>
@@ -538,4 +616,4 @@ export const LessonCatalogModal: React.FC<LessonCatalogModalProps> = ({
       </div>
     </div>
   );
-};
+});

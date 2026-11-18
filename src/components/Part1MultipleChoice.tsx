@@ -2,8 +2,8 @@ import React from 'react';
 import { MultipleChoiceQuestion } from '../types/exam';
 import { MathRenderer } from './MathRenderer';
 import { TikzFigure } from './TikzFigure';
-import { CheckCircle2, XCircle } from 'lucide-react';
-import { playAnswerFeedbackSound } from '../utils/audio';
+import { CheckCircle2, XCircle, Bookmark } from 'lucide-react';
+import { playAnswerFeedbackSound, playBookmarkSound } from '../utils/audio';
 
 interface Part1MultipleChoiceProps {
   questions: MultipleChoiceQuestion[];
@@ -17,12 +17,14 @@ interface Part1MultipleChoiceProps {
   totalQuestions?: number;
 }
 
-export const Part1MultipleChoice: React.FC<Part1MultipleChoiceProps> = ({
+export const Part1MultipleChoice: React.FC<Part1MultipleChoiceProps> = React.memo(({
   questions,
   selectedAnswers,
   onSelectAnswer,
   isSubmitted,
   examMode,
+  bookmarkedQuestions,
+  onToggleBookmark,
   fontSize,
   totalQuestions = 22,
 }) => {
@@ -124,6 +126,29 @@ export const Part1MultipleChoice: React.FC<Part1MultipleChoiceProps> = ({
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playBookmarkSound();
+                    onToggleBookmark(q.id);
+                  }}
+                  className={`min-w-[36px] min-h-[36px] px-2.5 py-1 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors duration-100 shrink-0 active:scale-95 ${
+                    bookmarkedQuestions.has(q.id)
+                      ? 'bg-amber-400/20 border-amber-400 text-amber-300'
+                      : 'bg-[#0b1739] border-sky-800/70 text-sky-300 hover:text-white'
+                  }`}
+                  title="Đánh dấu xem lại câu này"
+                >
+                  <Bookmark
+                    className={`w-3.5 h-3.5 ${
+                      bookmarkedQuestions.has(q.id) ? 'fill-amber-300 text-amber-300' : ''
+                    }`}
+                  />
+                  <span className="hidden sm:inline">
+                    {bookmarkedQuestions.has(q.id) ? 'Đã đánh dấu' : 'Đánh dấu'}
+                  </span>
+                </button>
               </div>
 
               {/* Question Prompt (Chữ trắng to rõ ràng, font Times New Roman chuẩn đề thi) */}
@@ -188,24 +213,25 @@ export const Part1MultipleChoice: React.FC<Part1MultipleChoiceProps> = ({
                   return (
                     <button
                       key={opt.key}
+                      type="button"
                       onClick={() => handleOptionClick(q, opt.key)}
                       disabled={isSubmitted}
-                      className={`flex items-center gap-3 sm:gap-4 min-h-[56px] p-3.5 sm:p-5 rounded-2xl border text-left transition-all min-w-0 w-full ${containerStyle} ${
+                      className={`flex items-center gap-3 sm:gap-4 min-h-[58px] p-3.5 sm:p-5 rounded-2xl border text-left transition-colors duration-100 select-none min-w-0 w-full ${containerStyle} ${
                         !isSubmitted
-                          ? 'cursor-pointer active:scale-[0.98]'
+                          ? 'cursor-pointer active:scale-[0.99]'
                           : 'cursor-default'
                       }`}
                     >
                       {/* Huy hiệu A, B, C, D */}
                       <span
-                        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full font-black font-times text-lg sm:text-xl flex items-center justify-center shrink-0 border-2 transition-all ${badgeStyle}`}
+                        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full font-black font-times text-lg sm:text-xl flex items-center justify-center shrink-0 border-2 ${badgeStyle}`}
                       >
                         {opt.key}
                       </span>
 
                       {/* Nội dung phương án */}
                       <div
-                        className={`flex-1 min-w-0 break-words leading-relaxed py-0.5 overflow-x-auto overflow-y-hidden no-scrollbar ${optionTextSizeClass} ${contentTextStyle}`}
+                        className={`flex-1 min-w-0 break-words leading-relaxed py-0.5 ${optionTextSizeClass} ${contentTextStyle}`}
                       >
                         <MathRenderer content={opt.content} />
                       </div>
@@ -241,4 +267,4 @@ export const Part1MultipleChoice: React.FC<Part1MultipleChoiceProps> = ({
       })}
     </div>
   );
-};
+});

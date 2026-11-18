@@ -487,47 +487,42 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
           {/* Filter & Search Bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0b1739] p-3.5 rounded-2xl border border-sky-800/70">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-sky-300 mr-1">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-sky-300 shrink-0">
                 <Filter className="w-4 h-4 text-cyan-400" />
                 <span>Lọc theo đề:</span>
               </div>
-              <button
-                onClick={() => setExamFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                  examFilter === 'all'
-                    ? 'bg-cyan-500 text-[#040817] shadow-sm'
-                    : 'bg-[#071126] text-sky-300 hover:text-white border border-sky-800'
-                }`}
+              <select
+                value={examFilter}
+                onChange={(e) => setExamFilter(e.target.value)}
+                className="flex-1 min-w-0 max-w-sm px-3 py-2 rounded-xl bg-[#071126] border border-sky-800 text-xs font-bold text-white focus:outline-none focus:border-cyan-400"
+                aria-label="Lọc bảng xếp hạng theo đề thi"
               >
-                Tất cả đề ({entries.length})
-              </button>
-              {allExams.map((ex) => {
-                const count = entries.filter((e) => e.examId === ex.id).length;
-                return (
-                  <button
-                    key={ex.id}
-                    onClick={() => setExamFilter(ex.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                      examFilter === ex.id
-                        ? 'bg-cyan-500 text-[#040817] shadow-sm'
-                        : 'bg-[#071126] text-sky-300 hover:text-white border border-sky-800'
-                    }`}
-                  >
-                    Đề {ex.title.length > 12 ? ex.title.slice(0, 12) + '…' : ex.title} ({count})
-                  </button>
-                );
-              })}
+                <option value="all" className="bg-[#071126]">
+                  Tất cả đề ({entries.length} lượt)
+                </option>
+                {allExams.map((ex) => {
+                  const count = entries.filter((e) => e.examId === ex.id).length;
+                  if (count === 0 && ex.id !== selectedExamId && !/^de-0\d+$/.test(ex.id)) {
+                    return null;
+                  }
+                  return (
+                    <option key={ex.id} value={ex.id} className="bg-[#071126]">
+                      {ex.title} ({count})
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-[200px]">
               <Search className="w-4 h-4 text-sky-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm tên học sinh, lớp..."
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#071126] border border-sky-800 text-xs text-white placeholder-sky-400/70 focus:outline-none focus:border-cyan-400"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#071126] border border-sky-800 text-xs text-white placeholder-sky-400/70 focus:outline-none focus:border-cyan-400"
               />
             </div>
           </div>

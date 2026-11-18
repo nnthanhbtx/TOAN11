@@ -7,8 +7,9 @@ import {
   X,
   CheckCircle2,
   XCircle,
+  Bookmark,
 } from 'lucide-react';
-import { playAnswerFeedbackSound } from '../utils/audio';
+import { playAnswerFeedbackSound, playBookmarkSound } from '../utils/audio';
 
 interface Part2TrueFalseProps {
   questions: TrueFalseQuestion[];
@@ -26,12 +27,14 @@ interface Part2TrueFalseProps {
   totalQuestions?: number;
 }
 
-export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = ({
+export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = React.memo(({
   questions,
   answers,
   onSelectStatement,
   isSubmitted,
   examMode,
+  bookmarkedQuestions,
+  onToggleBookmark,
   fontSize,
   totalQuestions = 22,
 }) => {
@@ -120,6 +123,29 @@ export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = ({
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playBookmarkSound();
+                    onToggleBookmark(q.id);
+                  }}
+                  className={`min-w-[36px] min-h-[36px] px-2.5 py-1 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors duration-100 shrink-0 active:scale-95 ${
+                    bookmarkedQuestions.has(q.id)
+                      ? 'bg-amber-400/20 border-amber-400 text-amber-300'
+                      : 'bg-[#0b1739] border-sky-800/70 text-sky-300 hover:text-white'
+                  }`}
+                  title="Đánh dấu xem lại câu này"
+                >
+                  <Bookmark
+                    className={`w-3.5 h-3.5 ${
+                      bookmarkedQuestions.has(q.id) ? 'fill-amber-300 text-amber-300' : ''
+                    }`}
+                  />
+                  <span className="hidden sm:inline">
+                    {bookmarkedQuestions.has(q.id) ? 'Đã đánh dấu' : 'Đánh dấu'}
+                  </span>
+                </button>
               </div>
 
               {/* Problem Prompt (Chữ trắng to rõ nổi bật, font Times New Roman) */}
@@ -170,20 +196,20 @@ export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = ({
                         </span>
 
                         <div
-                          className={`flex-1 min-w-0 break-words py-0.5 overflow-x-auto overflow-y-hidden no-scrollbar text-white font-bold font-times leading-relaxed ${statementTextSizeClass} [&_.katex]:text-white [&_.katex]:text-[1.1em]`}
+                          className={`flex-1 min-w-0 break-words py-0.5 text-white font-bold font-times leading-relaxed ${statementTextSizeClass} [&_.katex]:text-white [&_.katex]:text-[1.1em]`}
                         >
                           <MathRenderer content={st.statement} />
                         </div>
                       </div>
 
                       {/* True / False Buttons: Full-width 2-col grid on mobile for easy thumb tapping */}
-                      <div className="grid grid-cols-2 sm:flex items-center gap-2.5 sm:gap-3 shrink-0 w-full md:w-auto">
+                      <div className="grid grid-cols-2 sm:flex items-center gap-2.5 sm:gap-3 shrink-0 w-full md:w-auto select-none">
                         {/* Button ĐÚNG */}
                         <button
                           type="button"
                           disabled={isSubmitted}
                           onClick={() => handleSelect(q.id, st, true)}
-                          className={`min-h-[46px] flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-black text-base transition-all ${
+                          className={`min-h-[48px] flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-black text-base transition-colors duration-100 ${
                             userChoice === true
                               ? showSolution
                                 ? st.isCorrect
@@ -206,7 +232,7 @@ export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = ({
                           type="button"
                           disabled={isSubmitted}
                           onClick={() => handleSelect(q.id, st, false)}
-                          className={`min-h-[46px] flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-black text-base transition-all ${
+                          className={`min-h-[48px] flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-black text-base transition-colors duration-100 ${
                             userChoice === false
                               ? showSolution
                                 ? !st.isCorrect
@@ -278,4 +304,4 @@ export const Part2TrueFalse: React.FC<Part2TrueFalseProps> = ({
       })}
     </div>
   );
-};
+});

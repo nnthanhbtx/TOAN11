@@ -6,9 +6,11 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
+  Bookmark,
 } from 'lucide-react';
 import {
   playAnswerFeedbackSound,
+  playBookmarkSound,
   playClickSound,
 } from '../utils/audio';
 
@@ -24,12 +26,14 @@ interface Part3ShortAnswerProps {
   totalQuestions?: number;
 }
 
-export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
+export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = React.memo(({
   questions,
   answers,
   onAnswerChange,
   isSubmitted,
   examMode,
+  bookmarkedQuestions,
+  onToggleBookmark,
   fontSize,
   totalQuestions = 22,
 }) => {
@@ -124,6 +128,29 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playBookmarkSound();
+                    onToggleBookmark(q.id);
+                  }}
+                  className={`min-w-[36px] min-h-[36px] px-2.5 py-1 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors duration-100 shrink-0 active:scale-95 ${
+                    bookmarkedQuestions.has(q.id)
+                      ? 'bg-amber-400/20 border-amber-400 text-amber-300'
+                      : 'bg-[#0b1739] border-sky-800/70 text-sky-300 hover:text-white'
+                  }`}
+                  title="Đánh dấu xem lại câu này"
+                >
+                  <Bookmark
+                    className={`w-3.5 h-3.5 ${
+                      bookmarkedQuestions.has(q.id) ? 'fill-amber-300 text-amber-300' : ''
+                    }`}
+                  />
+                  <span className="hidden sm:inline">
+                    {bookmarkedQuestions.has(q.id) ? 'Đã đánh dấu' : 'Đánh dấu'}
+                  </span>
+                </button>
               </div>
 
               {/* Prompt (Chữ trắng to rõ ràng, font Times New Roman chuẩn đề thi) */}
@@ -146,31 +173,47 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
             {/* Answer Input Area (Khung nhập đáp số nền xanh sẫm với chữ lớn) */}
             <div className="rounded-2xl border border-sky-900/60 bg-[#071026] p-3.5 sm:p-6 shadow-2xl space-y-4">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
-                <div className="relative flex-1 sm:max-w-md flex items-center gap-2">
-                  {/* Nút đổi dấu Âm/Dương (±) chuyên dụng cho bàn phím số iPhone (iOS không có nút dấu trừ trên bàn phím decimal) */}
+                <div className="relative flex-1 sm:max-w-lg flex items-center gap-1.5 sm:gap-2">
+                  {/* Bộ nút trợ giúp bấm nhanh 1 chạm trên iPhone (Đổi dấu ±, Dấu chấm thập phân ., Xoá nhanh ⌫) */}
                   {!isSubmitted && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        const trimmed = userVal.trim();
-                        const toggled = trimmed.startsWith('-')
-                          ? trimmed.slice(1)
-                          : `-${trimmed}`;
-                        onAnswerChange(q.id, toggled);
-                        if (checkedStatus[q.id] !== undefined) {
-                          setCheckedStatus((prev) => {
-                            const next = { ...prev };
-                            delete next[q.id];
-                            return next;
-                          });
-                        }
-                      }}
-                      className="min-w-[50px] min-h-[52px] px-3 rounded-2xl bg-[#0b1739] hover:bg-sky-900 border border-sky-700/80 text-amber-300 font-mono font-black text-lg flex items-center justify-center shrink-0 active:scale-95 transition-all"
-                      title="Đổi dấu âm / dương (±) cho điện thoại iPhone"
-                    >
-                      ±
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0 select-none">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          const trimmed = userVal.trim();
+                          const toggled = trimmed.startsWith('-')
+                            ? trimmed.slice(1)
+                            : `-${trimmed}`;
+                          onAnswerChange(q.id, toggled);
+                          if (checkedStatus[q.id] !== undefined) {
+                            setCheckedStatus((prev) => {
+                              const next = { ...prev };
+                              delete next[q.id];
+                              return next;
+                            });
+                          }
+                        }}
+                        className="min-w-[46px] min-h-[52px] px-2.5 rounded-2xl bg-[#0b1739] hover:bg-sky-900 border border-sky-700/80 text-amber-300 font-mono font-black text-lg flex items-center justify-center active:scale-95 transition-colors duration-100"
+                        title="Đổi dấu âm / dương (±) cho bàn phím số iPhone"
+                      >
+                        ±
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          if (!userVal.includes('.') && !userVal.includes(',')) {
+                            const nextVal = userVal ? `${userVal}.` : '0.';
+                            onAnswerChange(q.id, nextVal);
+                          }
+                        }}
+                        className="min-w-[42px] min-h-[52px] px-2.5 rounded-2xl bg-[#0b1739] hover:bg-sky-900 border border-sky-700/80 text-cyan-300 font-mono font-black text-xl flex items-center justify-center active:scale-95 transition-colors duration-100"
+                        title="Thêm dấu chấm thập phân (.)"
+                      >
+                        .
+                      </button>
+                    </div>
                   )}
 
                   <div className="relative flex-1">
@@ -196,7 +239,7 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
                         }
                       }}
                       placeholder="Nhập đáp số (VD: -3, 2.5)..."
-                      className={`w-full min-h-[52px] px-4 sm:px-5 py-3 rounded-2xl border text-lg sm:text-2xl font-mono font-black tracking-wider transition-all focus:outline-none ${
+                      className={`w-full min-h-[52px] pl-4 pr-11 py-3 rounded-2xl border text-lg sm:text-2xl font-mono font-black tracking-wider transition-colors duration-100 focus:outline-none ${
                         showSolution && userVal
                           ? isCorrect
                             ? 'bg-emerald-950/70 border-2 border-emerald-400 text-emerald-200'
@@ -204,6 +247,19 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
                           : 'bg-[#0b1739] border-sky-700/60 text-white placeholder-sky-400/50 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30'
                       }`}
                     />
+                    {!isSubmitted && userVal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          onAnswerChange(q.id, '');
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-sky-950/90 hover:bg-rose-950 text-sky-300 hover:text-rose-300 border border-sky-800 flex items-center justify-center text-xs font-bold active:scale-95"
+                        title="Xoá nhanh đáp số"
+                      >
+                        ✕
+                      </button>
+                    )}
                     {showSolution && userVal && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
                         {isCorrect ? (
@@ -222,7 +278,7 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
                     type="button"
                     onClick={() => handleCheckAnswer(q)}
                     disabled={!userVal.trim()}
-                    className="min-h-[48px] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-sm sm:text-base transition-all shadow-lg shadow-cyan-950/60 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="min-h-[50px] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-sm sm:text-base transition-colors duration-100 shadow-lg shadow-cyan-950/60 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed select-none"
                     title="Kiểm tra đáp số và nghe âm thanh Đúng/Sai"
                   >
                     <Sparkles className="w-4 h-4 text-cyan-200" />
@@ -256,4 +312,4 @@ export const Part3ShortAnswer: React.FC<Part3ShortAnswerProps> = ({
       })}
     </div>
   );
-};
+});
