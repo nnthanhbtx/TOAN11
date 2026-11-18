@@ -4,18 +4,52 @@ import {
 } from './docxMathExtractor';
 
 let cachedPdfjsLib: any = null;
+let workerPolyfillFlag = false;
 
 async function getPdfjsLib() {
   if (cachedPdfjsLib) return cachedPdfjsLib;
   const pdfjsLib = await import('pdfjs-dist');
+  let workerUrl = '';
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    workerUrl = new URL(
       'pdfjs-dist/build/pdf.worker.min.mjs',
       import.meta.url
     ).toString();
   } catch {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    workerUrl = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
   }
+
+  // Trên iOS 16 - 17.3 (chưa có Promise.withResolvers trong Web Worker), bọc worker bằng Blob polyfill
+  if (
+    !workerPolyfillFlag &&
+    typeof Blob !== 'undefined' &&
+    typeof URL !== 'undefined' &&
+    typeof URL.createObjectURL === 'function' &&
+    workerUrl
+  ) {
+    workerPolyfillFlag = true;
+    try {
+      const absoluteWorkerUrl =
+        typeof window !== 'undefined' ? new URL(workerUrl, window.location.href).href : workerUrl;
+      const shimCode = `
+        if (typeof Promise.withResolvers !== 'function') {
+          Promise.withResolvers = function () {
+            var resolve, reject;
+            var promise = new Promise(function (res, rej) { resolve = res; reject = rej; });
+            return { promise: promise, resolve: resolve, reject: reject };
+          };
+        }
+        import(${JSON.stringify(absoluteWorkerUrl)});
+      `;
+      const blob = new Blob([shimCode], { type: 'application/javascript' });
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    } catch {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+    }
+  } else {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+  }
+
   cachedPdfjsLib = pdfjsLib;
   return pdfjsLib;
 }

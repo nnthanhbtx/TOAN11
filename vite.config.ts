@@ -17,6 +17,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         devOptions: {
           enabled: true,
+          type: 'module',
         },
         includeAssets: [
           'icon.svg',
@@ -65,7 +66,8 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          globPatterns: ['**/*.{js,mjs,css,html,ico,png,svg,woff,woff2,ttf}'],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf}'],
+          globIgnores: ['**/assets/aistudio/**', '**/pdf-*.js', '**/pdf.worker*'],
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
           cleanupOutdatedCaches: true,
           clientsClaim: true,

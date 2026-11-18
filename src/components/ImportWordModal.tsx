@@ -225,7 +225,22 @@ export const ImportWordModal: React.FC<ImportWordModalProps> = ({
   };
 
   const handleCopySample = () => {
-    navigator.clipboard.writeText(SAMPLE_WORD_CONTENT);
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(SAMPLE_WORD_CONTENT).catch(() => {});
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = SAMPLE_WORD_CONTENT;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    } catch {
+      // ignore clipboard errors on restricted iOS contexts
+    }
     setCopiedSample(true);
     setTimeout(() => setCopiedSample(false), 2000);
   };

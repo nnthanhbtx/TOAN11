@@ -25,8 +25,54 @@
       media="print"
       onload="this.media='all'"
     />
+    <script>
+      // Polyfill Promise.withResolvers ngay trước khi tải bất kỳ script nào (cần cho iOS 16 - 17.3)
+      if (typeof Promise !== 'undefined' && typeof Promise.withResolvers !== 'function') {
+        Promise.withResolvers = function () {
+          var resolve, reject;
+          var promise = new Promise(function (res, rej) {
+            resolve = res;
+            reject = rej;
+          });
+          return { promise: promise, resolve: resolve, reject: reject };
+        };
+      }
+      // Tự động phục hồi nếu iPhone bị kẹt cache Service Worker cũ gây trắng trang
+      (function () {
+        var RELOAD_KEY = 'math11_ios_sw_recover_v1';
+        window.addEventListener('DOMContentLoaded', function () {
+          setTimeout(function () {
+            var root = document.getElementById('root');
+            if (root && root.childElementCount === 0) {
+              try {
+                if (sessionStorage.getItem(RELOAD_KEY)) return;
+                sessionStorage.setItem(RELOAD_KEY, '1');
+              } catch (e) {}
+              var jobs = [];
+              if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+                jobs.push(
+                  navigator.serviceWorker.getRegistrations().then(function (regs) {
+                    return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                  })
+                );
+              }
+              if ('caches' in window && caches.keys) {
+                jobs.push(
+                  caches.keys().then(function (keys) {
+                    return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                  })
+                );
+              }
+              Promise.all(jobs).finally(function () {
+                window.location.reload();
+              });
+            }
+          }, 4500);
+        });
+      })();
+    </script>
   </head>
-  <body class="bg-[#040817] text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden">
+  <body class="bg-[#040817] text-slate-100 antialiased selection:bg-cyan-500 selection:text-slate-950 overflow-x-clip">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

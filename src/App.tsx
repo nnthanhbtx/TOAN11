@@ -109,7 +109,15 @@ export default function App() {
         const parsed = JSON.parse(savedCustom);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const defaultIds = new Set(baseWithLessons.map((e) => e.id));
-          const customOnly = parsed.filter((e: ExamSet) => e && e.id && !defaultIds.has(e.id));
+          const customOnly = parsed.filter(
+            (e: ExamSet) =>
+              e &&
+              typeof e.id === 'string' &&
+              !defaultIds.has(e.id) &&
+              Array.isArray(e.part1) &&
+              Array.isArray(e.part2) &&
+              Array.isArray(e.part3)
+          );
           return [...customOnly, ...baseWithLessons];
         }
       }
@@ -257,7 +265,9 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed.filter(
+            (item) => item && typeof item.id === 'string' && typeof item.totalScore === 'number'
+          );
         }
       }
     } catch {
@@ -366,18 +376,39 @@ export default function App() {
   };
 
   const [answers, setAnswers] = useState<StudentAnswers>(() => {
+    const baseAnswers = initializeAnswers(currentExam);
     try {
       const savedProgress = localStorage.getItem(ACTIVE_PROGRESS_STORAGE_KEY);
       if (savedProgress) {
         const parsed = JSON.parse(savedProgress);
-        if (parsed && parsed.selectedExamId === currentExam.id && parsed.answers) {
-          return parsed.answers;
+        if (parsed && parsed.selectedExamId === currentExam.id && parsed.answers && typeof parsed.answers === 'object') {
+          const savedP2 = parsed.answers.part2 && typeof parsed.answers.part2 === 'object' ? parsed.answers.part2 : {};
+          const mergedP2: StudentAnswers['part2'] = { ...baseAnswers.part2 };
+          Object.keys(mergedP2).forEach((qId) => {
+            if (savedP2[qId] && typeof savedP2[qId] === 'object') {
+              mergedP2[qId] = {
+                a: typeof savedP2[qId].a === 'boolean' ? savedP2[qId].a : null,
+                b: typeof savedP2[qId].b === 'boolean' ? savedP2[qId].b : null,
+                c: typeof savedP2[qId].c === 'boolean' ? savedP2[qId].c : null,
+                d: typeof savedP2[qId].d === 'boolean' ? savedP2[qId].d : null,
+              };
+            }
+          });
+          return {
+            part1: parsed.answers.part1 && typeof parsed.answers.part1 === 'object' ? parsed.answers.part1 : {},
+            part2: mergedP2,
+            part3: parsed.answers.part3 && typeof parsed.answers.part3 === 'object' ? parsed.answers.part3 : {},
+            part4: {
+              ...baseAnswers.part4,
+              ...(parsed.answers.part4 && typeof parsed.answers.part4 === 'object' ? parsed.answers.part4 : {}),
+            },
+          };
         }
       }
     } catch {
       // ignore
     }
-    return initializeAnswers(currentExam);
+    return baseAnswers;
   });
   const [scoreDetail, setScoreDetail] = useState<PartScoreDetail | null>(null);
 
